@@ -1,4 +1,4 @@
-package TWiki::Plugins::ImmediateNotifyPlugin::Jabber;
+package Foswiki::Plugins::ImmediateNotifyPlugin::Jabber;
 
 use strict;
 use Net::Jabber qw(Client);
@@ -14,12 +14,12 @@ use vars qw($user $pass $server $twikiuser $web $topic $debug $warning);
 sub initMethod {
     ($topic, $web, $twikiuser) = @_;
     my $prefPrefix = "IMMEDIATENOTIFYPLUGIN_JABBER_";
-    $user = TWiki::Func::getPreferencesValue($prefPrefix."USERNAME");
-    $pass = TWiki::Func::getPreferencesValue($prefPrefix."PASSWORD");
-    $server = TWiki::Func::getPreferencesValue($prefPrefix."SERVER");
+    $user = Foswiki::Func::getPreferencesValue($prefPrefix."USERNAME");
+    $pass = Foswiki::Func::getPreferencesValue($prefPrefix."PASSWORD");
+    $server = Foswiki::Func::getPreferencesValue($prefPrefix."SERVER");
     $twikiuser = $_[2];
-    $debug = \&TWiki::Plugins::ImmediateNotifyPlugin::debug;
-    $warning = \&TWiki::Plugins::ImmediateNotifyPlugin::warning;
+    $debug = \&Foswiki::Plugins::ImmediateNotifyPlugin::debug;
+    $warning = \&Foswiki::Plugins::ImmediateNotifyPlugin::warning;
     return defined($user) && defined($pass) && defined($server);
 }
 
@@ -45,8 +45,8 @@ sub handleNotify {
         return;
     }
     &$debug("- Jabber: Logged in OK, sending messages...");
-    my $mainWeb = TWiki::Func::getPreferencesValue("MAINWEB") || "Main";
-    my $toolName = TWiki::Func::getPreferencesValue("WIKITOOLNAME") || "TWiki";
+    my $mainWeb = Foswiki::Func::getPreferencesValue("MAINWEB") || "Main";
+    my $toolName = Foswiki::Func::getPreferencesValue("WIKITOOLNAME") || "TWiki";
     foreach my $user (keys %$users) {
         # get jabber userid
 	my $jabberID;

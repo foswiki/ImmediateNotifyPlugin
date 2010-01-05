@@ -19,7 +19,7 @@
 # This plugin supports immediate notification of topic saves.
 #
 # =========================
-package TWiki::Plugins::ImmediateNotifyPlugin;
+package Foswiki::Plugins::ImmediateNotifyPlugin;
 
 # =========================
 use vars qw(
@@ -40,10 +40,10 @@ $RELEASE = 'Dakar';
 
 $pluginName = 'ImmediateNotifyPlugin';    # Name of this Plugin
 
-sub debug { TWiki::Func::writeDebug(@_) if $debug; }
+sub debug { Foswiki::Func::writeDebug(@_) if $debug; }
 
 sub warning {
-    TWiki::Func::writeWarning(@_);
+    Foswiki::Func::writeWarning(@_);
     debug( "WARNING" . $_[0], @_[ 1 .. $#_ ] );
 }
 
@@ -52,7 +52,7 @@ sub initPlugin {
     ( $topic, $web, $user, $installWeb ) = @_;
 
     # check for Plugins.pm versions
-    if ( $TWiki::Plugins::VERSION < 1.011 ) {
+    if ( $Foswiki::Plugins::VERSION < 1.011 ) {
         warning("Version mismatch between $pluginName and Plugins.pm");
         return 0;
     }
@@ -60,9 +60,9 @@ sub initPlugin {
     my $prefPrefix = "\U$pluginName\E_";
 
     # Get plugin debug flag
-    TWiki::Func::getPreferencesFlag( $prefPrefix."DEBUG" );
+    Foswiki::Func::getPreferencesFlag( $prefPrefix."DEBUG" );
 
-    $methods = TWiki::Func::getPreferencesValue( $prefPrefix . "METHODS" );
+    $methods = Foswiki::Func::getPreferencesValue( $prefPrefix . "METHODS" );
     if ( !defined($methods) ) {
         warning("- $pluginName: No METHODS defined in plugin topic, defaulting to SMTP");
         $methods = "SMTP";
@@ -78,7 +78,7 @@ sub initPlugin {
             next;
         }
 
-        my $module = "TWiki::Plugins::ImmediateNotifyPlugin::${method}::";
+        my $module = "Foswiki::Plugins::ImmediateNotifyPlugin::${method}::";
         if ( eval $module . 'initMethod($topic, $web, $user)' ) {
             $methodHandlers{$method} = eval '\&' . $module . 'handleNotify';
         }
@@ -99,7 +99,7 @@ sub initPlugin {
     }
 
     # Plugin correctly initialized
-    debug("- TWiki::Plugins::${pluginName}::initPlugin( $web.$topic ) is OK");
+    debug("- Foswiki::Plugins::${pluginName}::initPlugin( $web.$topic ) is OK");
     return 1;
 }
 
@@ -111,7 +111,7 @@ sub processName {
         return if exists $groups->{$name};    # don't reprocess groups
 
         $groups->{$name} = undef; # add to hash, leave undef unless GROUP is set
-        $groupTopic = TWiki::Func::readTopicText( $mainWeb, $name );
+        $groupTopic = Foswiki::Func::readTopicText( $mainWeb, $name );
         unless ( defined($groupTopic) ) {
             warning("- $pluginName: Group topic \"$mainWeb.$name\" not found!");
             return;
@@ -134,7 +134,7 @@ sub processName {
         }
         $groups->{$name} = [@groupMembers];
     }
-    $users->{$name} = TWiki::Func::readTopicText( $mainWeb, $user );
+    $users->{$name} = Foswiki::Func::readTopicText( $mainWeb, $user );
 }
 
 sub replaceGroups {
@@ -158,7 +158,7 @@ sub replaceGroups {
 sub afterSaveHandler {
     my ( $text, $topic, $web, $error ) = @_;
 
- # This handler is called by TWiki::Store::saveTopic just after the save action.
+ # This handler is called by Foswiki::Store::saveTopic just after the save action.
 
     debug("- ${pluginName}::afterSaveHandler( $_[2].$_[1] )");
 
@@ -172,8 +172,8 @@ sub afterSaveHandler {
         @names = split /[\s\r\n]*[,\s][\s\r\n]*/, $1;
     }
 
-    my $notifyTopic = TWiki::Func::readTopicText( $web, "WebImmediateNotify" );
-    my $mainWeb = TWiki::Func::getMainWebname();
+    my $notifyTopic = Foswiki::Func::readTopicText( $web, "WebImmediateNotify" );
+    my $mainWeb = Foswiki::Func::getMainWebname();
     while ( $notifyTopic =~ /(\t+|(   )+)\* (?:\%MAINWEB\%|$mainWeb)\.([^\r\n]+)/go )
     {
         push @names, $3 if $3;
