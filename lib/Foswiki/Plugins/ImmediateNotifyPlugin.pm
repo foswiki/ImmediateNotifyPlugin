@@ -28,7 +28,7 @@ use vars qw(
 );
 use Data::Dumper;
 
-# This should always be $Rev$ so that TWiki can determine the checked-in
+# This should always be $Rev$ so that Foswiki can determine the checked-in
 # status of the plugin. It is used by the build automation tools, so
 # you should leave it alone.
 $VERSION = '$Rev$';
@@ -71,7 +71,7 @@ sub initPlugin {
     %methodHandlers = ();
     foreach $method ( split ' ', $methods ) {
         debug("- $pluginName: Loading method $method...");
-        $modulePresent = eval { require "TWiki/Plugins/ImmediateNotifyPlugin/$method.pm"; 1 };
+        $modulePresent = eval { require "Foswiki/Plugins/ImmediateNotifyPlugin/$method.pm"; 1 };
         unless ( defined($modulePresent) ) {
             warning("- ${pluginName}::$method failed to load: $@");
             debug("- ${pluginName}::$method failed to load: $@");

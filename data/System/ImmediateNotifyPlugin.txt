@@ -31,7 +31,7 @@ Once the plugin is installed, users can register for notification in the Web<nop
 __Note:__ You do not need to install anything on the browser to use this plugin. The following instructions are for the administrator who installs the plugin on the server where Foswiki is running.
 
    * Download the ZIP/TGZ file from the Plugin web (see below)
-   * Unzip =%TOPIC%.zip= in your twiki installation directory. Content:
+   * Unzip =%TOPIC%.zip= in your Foswiki installation directory. Content:
      | *File:* | *Description:* |
 %$MANIFEST%
    * Set up notification methods (default is SMTP)
@@ -47,8 +47,9 @@ __Note:__ You do not need to install anything on the browser to use this plugin.
 ---++ Plugin Info
 
 |  Plugin Author: | TWiki:Main/WalterMundt & TWiki:Main/JuergenPabel |
-|  Plugin Version: | v0.3 (26 Jul 2006) |
+|  Plugin Version: | v0.3.1 (05 Jan 2010) |
 |  Change History: | <!-- specify latest version first -->&nbsp; |
+|  05 Jan 2010 | Ported to Foswiki (Foswiki:Main.WillNoris) |
 |  21 May 2007 | Bugs:Item3969 - 8bit email fix (Foswiki:Main.WillNorris) |
 |  26 Jul 2006: | (v0.3) - Foswiki:Main.SteffenPoulsen: Ported to TWiki-4 / Dakar |
 |  16 Mar 2003: | Added support for groups and SMTP |
@@ -57,10 +58,9 @@ __Note:__ You do not need to install anything on the browser to use this plugin.
 |  Other Dependencies: | none |
 |  Perl Version: | &gt; 5.6.1 |
 |  Plugin Home: | http://foswiki.org/Extensions/%TOPIC% |
-|  Feedback: | http://foswiki.org/Extensions/%TOPIC%Dev |
+|  Support: | http://foswiki.org/Support/%TOPIC% |
 
 __Related Topics:__ %SYSTEMWEB%.DefaultPreferences, %USERSWEB%.SitePreferences, [[%SYSTEMWEB%.Plugins][Plugins]], DefaultPlugin
 
--- TWiki:Main/WalterMundt - 04 Feb 2003 <br />
--- TWiki:Main/JuergenPabel - 16 Mar 2003
+-- TWiki:Main/WalterMundt - 04 Feb 2003, TWiki:Main/JuergenPabel - 16 Mar 2003 <br/>
 

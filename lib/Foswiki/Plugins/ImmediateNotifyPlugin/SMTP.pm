@@ -4,7 +4,7 @@ use strict;
 use Foswiki::Net;
 
 use vars
-  qw($user $pass $server $twikiuser $web $topic $debug $warning $sendEmail);
+  qw($user $pass $server $wikiuser $web $topic $debug $warning $sendEmail);
 
 # ========================
 # initMethed - initializes a single notification method
@@ -13,9 +13,9 @@ use vars
 #    $web is the web in which the topic is stored
 #    $user is the logged-in user
 sub initMethod {
-    ( $topic, $web, $twikiuser ) = @_;
+    ( $topic, $web, $wikiuser ) = @_;
     $server    = "localhost"; #Foswiki::Func::getPreferencesValue("SMTPMAILHOST");
-    $twikiuser = $_[2];
+    $wikiuser = $_[2];
     $debug     = \&Foswiki::Plugins::ImmediateNotifyPlugin::debug;
     $warning   = \&Foswiki::Plugins::ImmediateNotifyPlugin::warning;
     $sendEmail = \&Foswiki::Net::sendEmail;
@@ -35,7 +35,7 @@ sub handleNotify {
     $template =~ s/%EMAILFROM%/$from/go;
     $template =~ s/%WEB%/$web/go;
     $template =~ s/%TOPICNAME%/$topic/go;
-    $template =~ s/%USER%/$twikiuser/go;
+    $template =~ s/%USER%/$wikiuser/go;
 
     $template = $Foswiki::Plugins::SESSION->handleCommonTags( $template, $topic );
 
@@ -54,8 +54,8 @@ sub handleNotify {
         $msg =~ s/%EMAILTO%/$to/go;
         &$debug("- SMTP: Sending mail to $to ($userName)");
 
-        my $twiki = new TWiki( $Foswiki::cfg{DefaultUserLogin} );
-        my $error = $twiki->{net}->sendEmail($msg);
+        my $foswiki = new Foswiki( $Foswiki::cfg{DefaultUserLogin} );
+        my $error = $foswiki->{net}->sendEmail($msg);
 
     }
 }
