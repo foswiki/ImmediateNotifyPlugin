@@ -57,10 +57,10 @@ sub initPlugin {
         return 0;
     }
 
-    my $prefPrefix = "\U$pluginName\E_";
+    my $prefPrefix = "IMMEDIATENOTIFYPLUGIN_";
 
     # Get plugin debug flag
-    Foswiki::Func::getPreferencesFlag( $prefPrefix."DEBUG" );
+    $debug = Foswiki::Func::getPreferencesFlag( $prefPrefix."DEBUG" ) || 0;
 
     $methods = Foswiki::Func::getPreferencesValue( $prefPrefix . "METHODS" );
     if ( !defined($methods) ) {
@@ -111,9 +111,9 @@ sub processName {
         return if exists $groups->{$name};    # don't reprocess groups
 
         $groups->{$name} = undef; # add to hash, leave undef unless GROUP is set
-        $groupTopic = Foswiki::Func::readTopicText( $mainWeb, $name );
+        $groupTopic = Foswiki::Func::readTopicText( $Foswiki::cfg{UsersWebName}, $name );
         unless ( defined($groupTopic) ) {
-            warning("- $pluginName: Group topic \"$mainWeb.$name\" not found!");
+            warning("- $pluginName: Group topic \"$Foswiki::cfg{UsersWebName}.$name\" not found!");
             return;
         }
         $groupTopic =~ /^\t+\* Set GROUP =(.+)\n[^\t]/sm;
@@ -134,7 +134,8 @@ sub processName {
         }
         $groups->{$name} = [@groupMembers];
     }
-    $users->{$name} = Foswiki::Func::readTopicText( $mainWeb, $user );
+    my ($meta, $text) = Foswiki::Func::readTopic( "$Foswiki::cfg{UsersWebName}", "$name" );
+    $users->{$name} = $text;
 }
 
 sub replaceGroups {
@@ -173,10 +174,11 @@ sub afterSaveHandler {
     }
 
     my $notifyTopic = Foswiki::Func::readTopicText( $web, "WebImmediateNotify" );
-    my $mainWeb = Foswiki::Func::getMainWebname();
+    $mainWeb = $Foswiki::cfg{UsersWebName};
     while ( $notifyTopic =~ /(\t+|(   )+)\* (?:\%MAINWEB\%|$mainWeb)\.([^\r\n]+)/go )
     {
         push @names, $3 if $3;
+        debug("- $pluginName: Adding $3") if ($3);
     }
 
     unless (@names) {
@@ -191,8 +193,9 @@ sub afterSaveHandler {
 
     my ( %userTopics, %userMethods );
     foreach my $user ( keys %users ) {
+        debug("- $pluginName processing Users: $user"); 
         unless ( defined( $users{$user} ) && length( $users{$user} ) > 0 ) {
-            warning("- $pluginName: User topic \"$mainWeb.$user\" not found!");
+            warning("- $pluginName: User topic \"$Foswiki::cfg{UsersWebName}.$user\" not found!");
             next;
         }
 
@@ -210,16 +213,19 @@ sub afterSaveHandler {
         }
         foreach my $method (@methodList) {
             $userMethods{$user}{$method} = 1;
+            debug("- $pluginName: Set method to $method for $user ");
         }
     }
 
     foreach my $method ( keys %methodHandlers ) {
+        debug("- Processing methods $method");
         my %methodUsers =
-          map { $userMethods{$user}{$method} ? ( $_, \$users{$_} ) : () }
+          map { $userMethods{$_}{$method} ? ( $_, \$users{$_} ) : () }
           keys %users;
         my @userList =
           keys %methodUsers;  # save current key list, so we can modify the hash
         foreach my $user (@userList) {
+            debug("replacing groups for $user");
             replaceGroups( $user, $method, \%methodUsers, \%users, \%groups );
         }
         debug( "- $pluginName: $method userlist " . join( " ", keys %methodUsers ) );

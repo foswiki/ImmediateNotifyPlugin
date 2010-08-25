@@ -30,6 +30,7 @@ sub handleNotify {
     my ($users)    = @_;
     my ($skin)     = Foswiki::Func::getPreferencesValue("SKIN");
     my ($template) = Foswiki::Func::readTemplate( 'smtp', 'immediatenotify' );
+    &$debug("- SMTP:  template read $template");
     my ($from)     = Foswiki::Func::getPreferencesValue("WIKIWEBMASTER");
 
     $template =~ s/%EMAILFROM%/$from/go;
@@ -37,25 +38,27 @@ sub handleNotify {
     $template =~ s/%TOPICNAME%/$topic/go;
     $template =~ s/%USER%/$wikiuser/go;
 
-    $template = $Foswiki::Plugins::SESSION->handleCommonTags( $template, $topic );
+    $template = Foswiki::Func::expandCommonVariables( $template, $topic, $web );
 
     foreach my $userName ( keys %$users ) {
 
         my ($to);
 
-        my $user = $Foswiki::Plugins::SESSION->{users}->findUser( $userName, $userName, 1 );
-        if ($user) {
-            foreach my $email ( $user->emails() ) {
-                $to .= $email . ",";
-            }
+        my @emails = Foswiki::Func::wikinameToEmails( $userName );
+        foreach my $email ( @emails ) {
+            $to .= $email . ",";
         }
 
         my $msg = $template;
         $msg =~ s/%EMAILTO%/$to/go;
         &$debug("- SMTP: Sending mail to $to ($userName)");
+        &$debug("- SMTP: MESSAGE ($msg)");
 
         my $foswiki = new Foswiki( $Foswiki::cfg{DefaultUserLogin} );
-        my $error = $foswiki->{net}->sendEmail($msg);
+        my $foswikiNet = $foswiki->net();
+        my $error = $foswikiNet->sendEmail($msg);
+
+        &$debug("- SMTP: Error ($error)") if ($error);
 
     }
 }
