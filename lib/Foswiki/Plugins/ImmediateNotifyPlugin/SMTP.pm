@@ -14,8 +14,8 @@ use vars
 #    $user is the logged-in user
 sub initMethod {
     ( $topic, $web, $wikiuser ) = @_;
-    $server    = "localhost"; #Foswiki::Func::getPreferencesValue("SMTPMAILHOST");
-    $wikiuser = $_[2];
+    $server = "localhost";  #Foswiki::Func::getPreferencesValue("SMTPMAILHOST");
+    $wikiuser  = $_[2];
     $debug     = \&Foswiki::Plugins::ImmediateNotifyPlugin::debug;
     $warning   = \&Foswiki::Plugins::ImmediateNotifyPlugin::warning;
     $sendEmail = \&Foswiki::Net::sendEmail;
@@ -31,7 +31,7 @@ sub handleNotify {
     my ($skin)     = Foswiki::Func::getPreferencesValue("SKIN");
     my ($template) = Foswiki::Func::readTemplate( 'smtp', 'immediatenotify' );
     &$debug("- SMTP:  template read $template");
-    my ($from)     = Foswiki::Func::getPreferencesValue("WIKIWEBMASTER");
+    my ($from) = Foswiki::Func::getPreferencesValue("WIKIWEBMASTER");
 
     $template =~ s/%EMAILFROM%/$from/go;
     $template =~ s/%WEB%/$web/go;
@@ -44,8 +44,8 @@ sub handleNotify {
 
         my ($to);
 
-        my @emails = Foswiki::Func::wikinameToEmails( $userName );
-        foreach my $email ( @emails ) {
+        my @emails = Foswiki::Func::wikinameToEmails($userName);
+        foreach my $email (@emails) {
             $to .= $email . ",";
         }
 
@@ -54,13 +54,13 @@ sub handleNotify {
         &$debug("- SMTP: Sending mail to $to ($userName)");
         &$debug("- SMTP: MESSAGE ($msg)");
 
-        my $foswiki = new Foswiki( $Foswiki::cfg{DefaultUserLogin} );
+        my $foswiki    = new Foswiki( $Foswiki::cfg{DefaultUserLogin} );
         my $foswikiNet = $foswiki->net();
-        my $error = $foswikiNet->sendEmail($msg);
+        my $error      = $foswikiNet->sendEmail($msg);
 
         &$debug("- SMTP: Error ($error)") if ($error);
 
     }
 }
 
-1; 
+1;
