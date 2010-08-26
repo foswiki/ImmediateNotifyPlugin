@@ -177,22 +177,36 @@ sub afterSaveHandler {
         return;
     }
 
+    # SMELL:  We should not have to parse out topic text.  But the old preferences
+    # cache is still loaded in the afterSaveHandler.   So we would miss changes made
+    # to the IMMEDIATENOTIFY setting in this save.
+    #my $nameString = Foswiki::Func::getPreferencesValue('IMMEDIATENOTIFY') || '';
+
     my @names;
-    if ( $text =~ /^\t+\* Set IMMEDIATENOTIFY =(.*)\n[^\t]/sm ) {
-        @names = split /[\s\r\n]*[,\s][\s\r\n]*/, $1;
+    $IMREGEX = qr/$Foswiki::regex{setRegex}IMMEDIATENOTIFY\s*=\s*(.*?)$/sm;
+
+    if ( $text =~ /$IMREGEX/ ) {
+        debug("- $pluginName: Found ($2) ");
+        my $nameString = $2;
+        chomp $nameString;
+        @names = split /[\s,]+/, $nameString;
+        foreach $n (@names) {
+            debug("- $pluginName: ($n) found in IMMEDIATENOTIFY in topic text");
+        }
     }
 
     my $notifyTopic =
       Foswiki::Func::readTopicText( $web, "WebImmediateNotify" );
-    $mainWeb = $Foswiki::cfg{UsersWebName};
+    debug("- $pluginName: no WebImmediateNotify topic found in $web") unless ($notifyTopic);
+
     while ( $notifyTopic =~
-        /(\t+|(   )+)\* (?:\%MAINWEB\%|$mainWeb)\.([^\r\n]+)/go )
+        /(\t+|(   )+)\* (?:\%MAINWEB\%|$Foswiki::cfg{UsersWebName})\.([^\r\n]+)/go )
     {
         push @names, $3 if $3;
         debug("- $pluginName: Adding $3") if ($3);
     }
 
-    unless (@names) {
+    unless ( scalar @names) {
         debug("- $pluginName: No names registered for notification.");
         return;
     }
@@ -217,11 +231,14 @@ sub afterSaveHandler {
             /(\t+|(   )+)\* Set IMMEDIATENOTIFYMETHOD = ([^\r\n]+)/ )
         {
             @methodList = split / *[, ] */, $3;
-        }
-        if (@methodList) {
+        } else {
+            @methodList = ("SMTP");
+            }
+        if ( scalar @methodList) {
             debug("- $pluginName: User $user: @methodList");
         }
-        elsif ( !exists( $group{$member} ) ) {
+        #elsif ( !exists( $group{$member} ) ) {
+        else  {
             debug(
 "- $pluginName: User $user chosen no methods, defaulting to SMTP."
             );
