@@ -36,7 +36,7 @@ $VERSION = '$Rev$';
 # This is a free-form string you can use to "name" your own plugin version.
 # It is *not* used by the build automation tools, but is reported as part
 # of the version number in PLUGINDESCRIPTIONS.
-$RELEASE = 'Dakar';
+$RELEASE = 'v0.4 (testing)';
 
 $pluginName = 'ImmediateNotifyPlugin';    # Name of this Plugin
 
@@ -177,10 +177,10 @@ sub afterSaveHandler {
         return;
     }
 
-    # SMELL:  We should not have to parse out topic text.  But the old preferences
-    # cache is still loaded in the afterSaveHandler.   So we would miss changes made
-    # to the IMMEDIATENOTIFY setting in this save.
-    #my $nameString = Foswiki::Func::getPreferencesValue('IMMEDIATENOTIFY') || '';
+# SMELL:  We should not have to parse out topic text.  But the old preferences
+# cache is still loaded in the afterSaveHandler.   So we would miss changes made
+# to the IMMEDIATENOTIFY setting in this save.
+#my $nameString = Foswiki::Func::getPreferencesValue('IMMEDIATENOTIFY') || '';
 
     my @names;
     $IMREGEX = qr/$Foswiki::regex{setRegex}IMMEDIATENOTIFY\s*=\s*(.*?)$/sm;
@@ -197,16 +197,18 @@ sub afterSaveHandler {
 
     my $notifyTopic =
       Foswiki::Func::readTopicText( $web, "WebImmediateNotify" );
-    debug("- $pluginName: no WebImmediateNotify topic found in $web") unless ($notifyTopic);
+    debug("- $pluginName: no WebImmediateNotify topic found in $web")
+      unless ($notifyTopic);
 
     while ( $notifyTopic =~
-        /(\t+|(   )+)\* (?:\%MAINWEB\%|$Foswiki::cfg{UsersWebName})\.([^\r\n]+)/go )
+/(\t+|(   )+)\* (?:\%MAINWEB\%|$Foswiki::cfg{UsersWebName})\.([^\r\n]+)/go
+      )
     {
         push @names, $3 if $3;
         debug("- $pluginName: Adding $3") if ($3);
     }
 
-    unless ( scalar @names) {
+    unless ( scalar @names ) {
         debug("- $pluginName: No names registered for notification.");
         return;
     }
@@ -231,14 +233,16 @@ sub afterSaveHandler {
             /(\t+|(   )+)\* Set IMMEDIATENOTIFYMETHOD = ([^\r\n]+)/ )
         {
             @methodList = split / *[, ] */, $3;
-        } else {
+        }
+        else {
             @methodList = ("SMTP");
-            }
-        if ( scalar @methodList) {
+        }
+        if ( scalar @methodList ) {
             debug("- $pluginName: User $user: @methodList");
         }
+
         #elsif ( !exists( $group{$member} ) ) {
-        else  {
+        else {
             debug(
 "- $pluginName: User $user chosen no methods, defaulting to SMTP."
             );

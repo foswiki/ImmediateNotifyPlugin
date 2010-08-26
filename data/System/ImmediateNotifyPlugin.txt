@@ -47,8 +47,10 @@ __Note:__ You do not need to install anything on the browser to use this plugin.
 ---++ Plugin Info
 
 |  Plugin Author: | TWiki:Main/WalterMundt & TWiki:Main/JuergenPabel |
-|  Plugin Version: | v0.3.1 (05 Jan 2010) |
+|  Plugin Version: | %$VERSION% |
+|  Plugin Release: | %$RELEASE% |
 |  Change History: | <!-- specify latest version first -->&nbsp; |
+|  26 Aug 2010 | Test release - Foswikitask:Item9551 |
 |  05 Jan 2010 | Ported to Foswiki (Foswiki:Main.WillNoris) |
 |  21 May 2007 | Bugs:Item3969 - 8bit email fix (Foswiki:Main.WillNorris) |
 |  26 Jul 2006: | (v0.3) - Foswiki:Main.SteffenPoulsen: Ported to TWiki-4 / Dakar |
