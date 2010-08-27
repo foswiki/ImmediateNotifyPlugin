@@ -23,22 +23,16 @@ package Foswiki::Plugins::ImmediateNotifyPlugin;
 
 # =========================
 use vars qw(
-  $web $topic $user $installWeb $VERSION $RELEASE $pluginName
-  $debug %methodHandlers
-);
+  $web $topic $user $installWeb
+  $debug );
+
 use Data::Dumper;
 
-# This should always be $Rev$ so that Foswiki can determine the checked-in
-# status of the plugin. It is used by the build automation tools, so
-# you should leave it alone.
-$VERSION = '$Rev$';
+our $VERSION           = '$Rev$';
+our $RELEASE           = 'v0.4 (testing)';
+our $NO_PREFS_IN_TOPIC = 1;
 
-# This is a free-form string you can use to "name" your own plugin version.
-# It is *not* used by the build automation tools, but is reported as part
-# of the version number in PLUGINDESCRIPTIONS.
-$RELEASE = 'v0.4 (testing)';
-
-$pluginName = 'ImmediateNotifyPlugin';    # Name of this Plugin
+my %methodHandlers;
 
 sub debug { Foswiki::Func::writeDebug(@_) if $debug; }
 
@@ -53,31 +47,48 @@ sub initPlugin {
 
     # check for Plugins.pm versions
     if ( $Foswiki::Plugins::VERSION < 1.011 ) {
-        warning("Version mismatch between $pluginName and Plugins.pm");
+        warning(
+            "Version mismatch between ImmediateNotifyPlugin and Plugins.pm");
         return 0;
     }
-
-    my $prefPrefix = "IMMEDIATENOTIFYPLUGIN_";
 
     # Get plugin debug flag
-    $debug = Foswiki::Func::getPreferencesFlag( $prefPrefix . "DEBUG" ) || 0;
+    $debug = Foswiki::Func::getPluginPreferencesFlag("DEBUG") || 0;
 
-    $methods = Foswiki::Func::getPreferencesValue( $prefPrefix . "METHODS" );
-    if ( !defined($methods) ) {
+    _loadHandlers();
+
+    unless (%methodHandlers) {
         warning(
-"- $pluginName: No METHODS defined in plugin topic, defaulting to SMTP"
+"- ImmediateNotifyPlugin: No methods available, initialization failed"
         );
-        $methods = "SMTP";
         return 0;
     }
+
+    # Plugin correctly initialized
+    debug(
+"- Foswiki::Plugins::ImmediateNotifyPlugin::initPlugin( $web.$topic ) is OK"
+    );
+    return 1;
+}
+
+sub _loadHandlers {
+
+    my $methods = Foswiki::Func::getPluginPreferencesValue("METHODS");
+    if ( !defined($methods) ) {
+        warning(
+"- ImmediateNotifyPlugin: No METHODS defined in site preferences topic, defaulting to SMTP"
+        );
+        $methods = "SMTP";
+    }
+
     %methodHandlers = ();
     foreach $method ( split ' ', $methods ) {
-        debug("- $pluginName: Loading method $method...");
+        debug("- ImmediateNotifyPlugin: Loading method $method...");
         $modulePresent =
           eval { require "Foswiki/Plugins/ImmediateNotifyPlugin/$method.pm"; 1 };
         unless ( defined($modulePresent) ) {
-            warning("- ${pluginName}::$method failed to load: $@");
-            debug("- ${pluginName}::$method failed to load: $@");
+            warning("- ImmediateNotifyPlugin::$method failed to load: $@");
+            debug("- ImmediateNotifyPlugin::$method failed to load: $@");
             next;
         }
 
@@ -86,81 +97,42 @@ sub initPlugin {
             $methodHandlers{$method} = eval '\&' . $module . 'handleNotify';
         }
         else {
-            debug("- $pluginName: initMethod failed");
+            debug("- ImmediateNotifyPlugin: initMethod failed");
         }
 
         if ( defined( $methodHandlers{$method} ) ) {
             debug("- ImmediateNotifyPlugin::$method OK");
         }
         else {
-            warning("- ${pluginName}::$method failed to load");
+            warning("- ImmediateNotifyPlugin::$method failed to load");
         }
     }
-    unless (%methodHandlers) {
-        warning("- $pluginName: No methods available, initialization failed");
-        return 0;
-    }
-
-    # Plugin correctly initialized
-    debug("- Foswiki::Plugins::${pluginName}::initPlugin( $web.$topic ) is OK");
-    return 1;
 }
 
 sub processName {
     my ( $name, $users, $groups ) = @_;
-    debug("- $pluginName: Processing name $name");
+    debug("- ImmediateNotifyPlugin: Processing name $name");
     return if ( length($name) == 0 );
-    if ( $name =~ /Group$/go ) {
+
+    # SMELL:  We can't use Preferences API to retrieve user topic information.
+    # API requires that topic be readable by current user,  but we can't
+    # be sure of that - and user topics are often protected.
+
+    if ( Foswiki::Func::isGroup($name) ) {
         return if exists $groups->{$name};    # don't reprocess groups
 
-        $groups->{$name} = undef; # add to hash, leave undef unless GROUP is set
-        $groupTopic =
-          Foswiki::Func::readTopicText( $Foswiki::cfg{UsersWebName}, $name );
-        unless ( defined($groupTopic) ) {
-            warning(
-"- $pluginName: Group topic \"$Foswiki::cfg{UsersWebName}.$name\" not found!"
-            );
-            return;
+        $groups->{$name} = $name;
+
+        my $it = Foswiki::Func::eachGroupMember($name);
+        while ( $it->hasNext() ) {
+            my $user = $it->next();
+            processName( $user, $users, $groups );
         }
-        $groupTopic =~ /^\t+\* Set GROUP =(.+)\n[^\t]/sm;
-        my @groupMembers = split /[\r\n\s]*[,\s][\r\n\s]*/, $1;
-        if (@groupMembers) {
-            debug("- $pluginName: Group $name consists of: @groupMembers");
-        }
-        else {
-            debug("- $pluginName: Group $name is undefined or has no members!");
-        }
-        foreach my $groupMember (@groupMembers) {
-            if ( $name =~ /^.*\.(.*)$/ ) {
-                processName($2);
-            }
-            else {
-                processName($groupMember);
-            }
-        }
-        $groups->{$name} = [@groupMembers];
     }
-    my ( $meta, $text ) =
-      Foswiki::Func::readTopic( "$Foswiki::cfg{UsersWebName}", "$name" );
-    $users->{$name} = $text;
-}
-
-sub replaceGroups {
-    my ( $name, $method, $methodUsers, $users, $groups ) = @_;
-    return unless exists $groups->{$name};
-
-    debug(
-        "- $pluginName: Group $name registered for method $method, expanding..."
-    );
-
-    delete $methodUsers->{$name};
-    foreach $member ( @{ $groups->{$name} } ) {
-        if ( exists $groups->{$member} ) {
-            replaceGroups( $member, $users, $groups );
-        }
-        else {
-            $methodUsers->{$member} = \$users->{$member};
-        }
+    else {
+        my ( $meta, $text ) =
+          Foswiki::Func::readTopic( "$Foswiki::cfg{UsersWebName}", "$name" );
+        $users->{$name}{TEXT} = $text;
     }
 }
 
@@ -170,10 +142,10 @@ sub afterSaveHandler {
 
 # This handler is called by Foswiki::Store::saveTopic just after the save action.
 
-    debug("- ${pluginName}::afterSaveHandler( $_[2].$_[1] )");
+    debug("- ImmediateNotifyPlugin::afterSaveHandler( $_[2].$_[1] )");
 
     if ($error) {
-        debug("- $pluginName: Unsuccessful save, not notifying...");
+        debug("- ImmediateNotifyPlugin: Unsuccessful save, not notifying...");
         return;
     }
 
@@ -183,21 +155,24 @@ sub afterSaveHandler {
 #my $nameString = Foswiki::Func::getPreferencesValue('IMMEDIATENOTIFY') || '';
 
     my @names;
-    $IMREGEX = qr/$Foswiki::regex{setRegex}IMMEDIATENOTIFY\s*=\s*(.*?)$/sm;
+    $IMREGEX =
+qr/$Foswiki::regex{setRegex}(?:IMMEDIATENOTIFYPLUGIN_)?IMMEDIATENOTIFY\s*=\s*(.*?)$/sm;
 
     if ( $text =~ /$IMREGEX/ ) {
-        debug("- $pluginName: Found ($2) ");
+        debug("- ImmediateNotifyPlugin: Found ($2) ");
         my $nameString = $2;
         chomp $nameString;
         @names = split /[\s,]+/, $nameString;
         foreach $n (@names) {
-            debug("- $pluginName: ($n) found in IMMEDIATENOTIFY in topic text");
+            debug(
+"- ImmediateNotifyPlugin: ($n) found in IMMEDIATENOTIFY in topic text"
+            );
         }
     }
 
     my $notifyTopic =
       Foswiki::Func::readTopicText( $web, "WebImmediateNotify" );
-    debug("- $pluginName: no WebImmediateNotify topic found in $web")
+    debug("- ImmediateNotifyPlugin: no WebImmediateNotify topic found in $web")
       unless ($notifyTopic);
 
     while ( $notifyTopic =~
@@ -205,11 +180,11 @@ sub afterSaveHandler {
       )
     {
         push @names, $3 if $3;
-        debug("- $pluginName: Adding $3") if ($3);
+        debug("- ImmediateNotifyPlugin: Adding $3") if ($3);
     }
 
     unless ( scalar @names ) {
-        debug("- $pluginName: No names registered for notification.");
+        debug("- ImmediateNotifyPlugin: No names registered for notification.");
         return;
     }
 
@@ -220,16 +195,16 @@ sub afterSaveHandler {
 
     my ( %userTopics, %userMethods );
     foreach my $user ( keys %users ) {
-        debug("- $pluginName processing Users: $user");
+        debug("- ImmediateNotifyPlugin processing Users: $user");
         unless ( defined( $users{$user} ) && length( $users{$user} ) > 0 ) {
             warning(
-"- $pluginName: User topic \"$Foswiki::cfg{UsersWebName}.$user\" not found!"
+"- ImmediateNotifyPlugin: User topic \"$Foswiki::cfg{UsersWebName}.$user\" not found!"
             );
             next;
         }
 
         my @methodList = {};
-        if ( $users{$user} =~
+        if ( $users{$user}{TEXT} =~
             /(\t+|(   )+)\* Set IMMEDIATENOTIFYMETHOD = ([^\r\n]+)/ )
         {
             @methodList = split / *[, ] */, $3;
@@ -238,19 +213,19 @@ sub afterSaveHandler {
             @methodList = ("SMTP");
         }
         if ( scalar @methodList ) {
-            debug("- $pluginName: User $user: @methodList");
+            debug("- ImmediateNotifyPlugin: User $user: @methodList");
         }
 
         #elsif ( !exists( $group{$member} ) ) {
         else {
             debug(
-"- $pluginName: User $user chosen no methods, defaulting to SMTP."
+"- ImmediateNotifyPlugin: User $user chosen no methods, defaulting to SMTP."
             );
             @methodList = ("SMTP");
         }
         foreach my $method (@methodList) {
             $userMethods{$user}{$method} = 1;
-            debug("- $pluginName: Set method to $method for $user ");
+            debug("- ImmediateNotifyPlugin: Set method to $method for $user ");
         }
     }
 
@@ -261,11 +236,8 @@ sub afterSaveHandler {
           keys %users;
         my @userList =
           keys %methodUsers;  # save current key list, so we can modify the hash
-        foreach my $user (@userList) {
-            debug("replacing groups for $user");
-            replaceGroups( $user, $method, \%methodUsers, \%users, \%groups );
-        }
-        debug( "- $pluginName: $method userlist "
+
+        debug( "- ImmediateNotifyPlugin: $method userlist "
               . join( " ", keys %methodUsers ) );
         if (%methodUsers) {
             &{ $methodHandlers{$method} }( \%methodUsers );
