@@ -8,27 +8,28 @@ use vars
 
 # ========================
 # initMethed - initializes a single notification method
-# Parametrs $topic, $web, $user
-#    $topic is the current topic
-#    $web is the web in which the topic is stored
-#    $user is the logged-in user
 sub initMethod {
-    ( $topic, $web, $wikiuser ) = @_;
-    $server = "localhost";  #Foswiki::Func::getPreferencesValue("SMTPMAILHOST");
-    $wikiuser  = $_[2];
-    $debug     = \&Foswiki::Plugins::ImmediateNotifyPlugin::debug;
-    $warning   = \&Foswiki::Plugins::ImmediateNotifyPlugin::warning;
-    $sendEmail = \&Foswiki::Net::sendEmail;
+
+    $server = $Foswiki::cfg{SMTP}{MAILHOST}
+      || Foswiki::Func::getPreferencesValue("SMTPMAILHOST");
+    $debug   = \&Foswiki::Plugins::ImmediateNotifyPlugin::debug;
+    $warning = \&Foswiki::Plugins::ImmediateNotifyPlugin::warning;
     return defined($server);
 }
 
 # ========================
 # handleNotify - handles notification for a single notification method
-# Parameters: $users
-#    $users is a hash reference of the form username->user topic text
+# Parameters: $userHash, $web, $topic, $wikiuser
+#    $userHash is a hash reference of the form username->user topic text
+#    $web is the web in which the topic is stored
+#    $topic is the current topic
+#    $wikiuser is the logged-in user who saved the topic
 sub handleNotify {
-    my ($users)    = @_;
-    my ($skin)     = Foswiki::Func::getPreferencesValue("SKIN");
+    my $userHash = shift;
+    my $web      = shift;
+    my $topic    = shift;
+    my $wikiuser = shift;
+    my ($skin)   = Foswiki::Func::getPreferencesValue("SKIN");
     my ($template) = Foswiki::Func::readTemplate( 'smtp', 'immediatenotify' );
 
     # &$debug("- SMTP:  template read $template");
@@ -41,7 +42,7 @@ sub handleNotify {
 
     $template = Foswiki::Func::expandCommonVariables( $template, $topic, $web );
 
-    foreach my $userName ( keys %$users ) {
+    foreach my $userName ( keys %$userHash ) {
 
         my ($to);
         &$debug("- SMTP: userName $userName");

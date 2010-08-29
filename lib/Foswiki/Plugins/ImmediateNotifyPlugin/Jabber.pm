@@ -1,51 +1,62 @@
 package Foswiki::Plugins::ImmediateNotifyPlugin::Jabber;
 
 use strict;
-use Net::Jabber qw(Client);
+use warnings;
 
-use vars qw($user $pass $server $wikiuser $web $topic $debug $warning);
+use Net::XMPP qw(Client);
+
+my $debug;
+my $warning;
+my $xmppUser;
+my $xmppPass;
+my $xmppServer;
+my $xmppResource;
 
 # ========================
 # initMethed - initializes a single notification method
-# Parametrs $topic, $web, $user
-#    $topic is the current topic
-#    $web is the web in which the topic is stored
-#    $user is the logged-in user
 sub initMethod {
-    ( $topic, $web, $wikiuser ) = @_;
     my $prefPrefix = "IMMEDIATENOTIFYPLUGIN_JABBER_";
-    $user     = Foswiki::Func::getPreferencesValue( $prefPrefix . "USERNAME" );
-    $pass     = Foswiki::Func::getPreferencesValue( $prefPrefix . "PASSWORD" );
-    $server   = Foswiki::Func::getPreferencesValue( $prefPrefix . "SERVER" );
-    $wikiuser = $_[2];
-    $debug    = \&Foswiki::Plugins::ImmediateNotifyPlugin::debug;
-    $warning  = \&Foswiki::Plugins::ImmediateNotifyPlugin::warning;
-    return defined($user) && defined($pass) && defined($server);
+    $xmppUser = Foswiki::Func::getPreferencesValue( $prefPrefix . "USERNAME" );
+    $xmppPass = Foswiki::Func::getPreferencesValue( $prefPrefix . "PASSWORD" );
+    $xmppServer = Foswiki::Func::getPreferencesValue( $prefPrefix . "SERVER" );
+    $xmppResource =
+      'Foswiki';    #Foswiki::Func::getPreferencesValue( 'WIKITOOLNAME' );
+    $debug   = \&Foswiki::Plugins::ImmediateNotifyPlugin::debug;
+    $warning = \&Foswiki::Plugins::ImmediateNotifyPlugin::warning;
+    &$debug("- Jabber init with $xmppUser,  $xmppPass, $xmppServer");
+    return defined($xmppUser) && defined($xmppPass) && defined($xmppServer);
 }
 
 # ========================
 # handleNotify - handles notification for a single notification method
-# Parameters: $users
-#    $users is a hash reference of the form username->user topic text
+# Parameters: $userHash, $web, $topic, $wikiuser
+#    $userHash is a hash reference of the form username->user topic text
+#    $web is the web in which the topic is stored
+#    $topic is the current topic
+#    $wikiuser is the logged-in user who saved the topic
 sub handleNotify {
-    my ($users) = @_;
+    my $userHash = shift;
+    my $web      = shift;
+    my $topic    = shift;
+    my $wikiuser = shift;
 
-    my $con = new Net::Jabber::Client;
-    &$debug("- Jabber: Connecting to server $server...");
-    $con->Connect( hostname => $server );
+    my $con = new Net::XMPP::Client;
+    &$debug("- Jabber: Connecting to server $xmppServer...");
+    $con->Connect( hostname => $xmppServer );
     unless ( $con->Connected() ) {
-        &$warning("- Jabber: Could not connect to Jabber server $server");
+        &$warning("- Jabber: Could not connect to Jabber server $xmppServer");
         return;
     }
-    &$debug("- Jabber: Connected, logging in w/$user and $pass...");
-    my @authResult = $con->AuthSend(
-        username => $user,
-        password => $pass,
-        resource => "foswiki"
+    &$debug(
+        "- Jabber: Connected, logging in with ($xmppUser) and ($xmppPass)...");
+    my @authResult = $con->AuthIQAuth(
+        username => $xmppUser,
+        password => $xmppPass,
+        resource => $xmppResource,
     );
     if ( $authResult[0] ne 'ok' ) {
         &$warning(
-"- Jabber: Could not log in to Jabber server $server ($user, $pass): $authResult[0] $authResult[1]"
+"- Jabber: Could not log in to Jabber server $xmppServer ($xmppUser), ($xmppPass): $authResult[0] $authResult[1]"
         );
         $con->Disconnect();
         return;
@@ -54,23 +65,28 @@ sub handleNotify {
     my $mainWeb = Foswiki::Func::getPreferencesValue("MAINWEB") || "Main";
     my $toolName = Foswiki::Func::getPreferencesValue("WIKITOOLNAME")
       || "Foswiki";
-    foreach my $user ( keys %$users ) {
+    foreach my $user ( keys %$userHash ) {
+
+        #&$debug(" userref = ".ref($userHash->{$user}));
+        my %uHash = %{ $userHash->{$user} };
+
+        #foreach my $kkk (keys %uHash) {
+        #    &$debug(" DUMP kkk $kkk $uHash{$kkk} ");
+        #    }
 
         # get jabber userid
         my $jabberID;
-        if ( ${ $users->{$user} } =~ /Jabber:\s*(.+)/ ) {
-            $jabberID = $1;
+        if ( $uHash{PARMS} ) {
+            $jabberID = $uHash{PARMS};
+            &$debug("- Jabber: User $user: $jabberID");
         }
-        unless ( defined($jabberID) && length($jabberID) > 0 ) {
-            &$debug("- Jabber: User $user has no Jabber: line!");
-            next;
-        }
-        &$debug("- Jabber: User $user: $jabberID");
-        my $message = new Net::Jabber::Message;
-        my $body    = "$web.$topic on $toolName has been updated by $wikiuser!";
+        next unless $jabberID;
+        my $message  = new Net::XMPP::Message;
+        my $topicUrl = Foswiki::Func::getViewUrl( $web, $topic );
+        my $body     = "$topicUrl on $toolName has been updated by $wikiuser!";
         $message->SetMessage(
             to   => $jabberID,
-            from => "$user\@$server",
+            from => "$user\@$xmppServer",
             body => $body
         );
         $con->Send($message);
