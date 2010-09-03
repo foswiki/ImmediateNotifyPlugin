@@ -11,6 +11,7 @@ my $xmppUser;
 my $xmppPass;
 my $xmppServer;
 my $xmppResource;
+my $con;
 
 # ========================
 # initMethed - initializes a single notification method
@@ -24,7 +25,32 @@ sub initMethod {
     $debug   = \&Foswiki::Plugins::ImmediateNotifyPlugin::debug;
     $warning = \&Foswiki::Plugins::ImmediateNotifyPlugin::warning;
     &$debug("- Jabber init with $xmppUser,  $xmppPass, $xmppServer");
-    return defined($xmppUser) && defined($xmppPass) && defined($xmppServer);
+
+    return unless defined($xmppUser) && defined($xmppPass) && defined($xmppServer);
+
+    $con = new Net::XMPP::Client;
+    &$debug("- Jabber: Connecting to server $xmppServer...");
+    $con->Connect( hostname => $xmppServer );
+    unless ( $con->Connected() ) {
+        &$warning("- Jabber: Could not connect to Jabber server $xmppServer");
+        return 0;
+    }
+    &$debug(
+        "- Jabber: Connected, logging in with ($xmppUser) and ($xmppPass)...");
+    my @authResult = $con->AuthIQAuth(
+        username => $xmppUser,
+        password => $xmppPass,
+        resource => $xmppResource,
+    );
+    if ( $authResult[0] ne 'ok' ) {
+        &$warning(
+"- Jabber: Could not log in to Jabber server $xmppServer ($xmppUser), ($xmppPass): $authResult[0] $authResult[1]"
+        );
+        $con->Disconnect();
+        undef $con;
+        return 0;
+    }
+    return 1;
 }
 
 # ========================
@@ -40,27 +66,6 @@ sub handleNotify {
     my $topic    = shift;
     my $wikiuser = shift;
 
-    my $con = new Net::XMPP::Client;
-    &$debug("- Jabber: Connecting to server $xmppServer...");
-    $con->Connect( hostname => $xmppServer );
-    unless ( $con->Connected() ) {
-        &$warning("- Jabber: Could not connect to Jabber server $xmppServer");
-        return;
-    }
-    &$debug(
-        "- Jabber: Connected, logging in with ($xmppUser) and ($xmppPass)...");
-    my @authResult = $con->AuthIQAuth(
-        username => $xmppUser,
-        password => $xmppPass,
-        resource => $xmppResource,
-    );
-    if ( $authResult[0] ne 'ok' ) {
-        &$warning(
-"- Jabber: Could not log in to Jabber server $xmppServer ($xmppUser), ($xmppPass): $authResult[0] $authResult[1]"
-        );
-        $con->Disconnect();
-        return;
-    }
     &$debug("- Jabber: Logged in OK, sending messages...");
     my $mainWeb = Foswiki::Func::getPreferencesValue("MAINWEB") || "Main";
     my $toolName = Foswiki::Func::getPreferencesValue("WIKITOOLNAME")
@@ -69,10 +74,6 @@ sub handleNotify {
 
         #&$debug(" userref = ".ref($userHash->{$user}));
         my %uHash = %{ $userHash->{$user} };
-
-        #foreach my $kkk (keys %uHash) {
-        #    &$debug(" DUMP kkk $kkk $uHash{$kkk} ");
-        #    }
 
         # get jabber userid
         my $jabberID;

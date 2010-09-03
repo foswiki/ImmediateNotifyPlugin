@@ -30,13 +30,17 @@ our $RELEASE           = 'v0.4 (testing)';
 our $NO_PREFS_IN_TOPIC = 1;
 
 our $debug;
-my %methodHandlers;
+
+my %methodHandlers;      # Loaded handlers
+my %methodAllowed;       # Methods permitted by config.
 
 # Regular expressions used in topic processing
+
 my $NOTIFYREGEX =
 qr/$Foswiki::regex{setRegex}(?:IMMEDIATENOTIFYPLUGIN_)?IMMEDIATENOTIFY\s*=\s*(.*?)$/sm;
+
 my $METHODREGEX =
-qr/$Foswiki::regex{setRegex}(?:IMMEDIATENOTIFYPLUGIN_)?IMMEDIATENOTIFYMETHOD\s*=\s*(.*?)(?:\((.*?)\))?$/sm;
+qr/$Foswiki::regex{setRegex}(?:IMMEDIATENOTIFYPLUGIN_)?IMMEDIATENOTIFYMETHOD\s*=\s*(.*?)(?:\((.*?)\))?\s*$/sm;
 
 sub debug { Foswiki::Func::writeDebug(@_) if $debug; }
 
@@ -59,29 +63,32 @@ sub initPlugin {
     # Get plugin debug flag
     $debug = Foswiki::Func::getPluginPreferencesFlag("DEBUG") || 0;
 
-    if ( _loadHandlers() ) {
-
-        # Plugin correctly initialized
-        debug(
-"- Foswiki::Plugins::ImmediateNotifyPlugin::initPlugin( $web.$topic ) is OK"
-        );
-        return 1;
-    }
-}
-
-sub _loadHandlers {
-    my $loadMethod = shift;
-
     my $methods = Foswiki::Func::getPluginPreferencesValue("METHODS");
     if ( !defined($methods) ) {
         warning(
 "- ImmediateNotifyPlugin: No METHODS defined in site preferences topic, defaulting to SMTP"
         );
-        $methods = "SMTP";
+        $methodAllowed{SMTP} = 1;;
+    }
+    else {
+        foreach my $method ( split(/[,\s]+/, $methods) ) {
+            debug("Allowing method $method");
+            $methodAllowed{$method} = 1;
+        }
     }
 
-    %methodHandlers = ();
-    foreach my $method ( split ' ', $methods ) {
+    # Plugin correctly initialized
+    debug(
+"- Foswiki::Plugins::ImmediateNotifyPlugin::initPlugin( $web.$topic ) is OK"
+    );
+    return 1;
+}
+
+sub _loadHandler {
+    my $method = shift;
+    return 1 if $methodHandlers{$method};  # Already loaded
+
+    if ($methodAllowed{$method} ) {
         debug("- ImmediateNotifyPlugin: Loading method $method...");
         my $modulePresent =
           eval { require "Foswiki/Plugins/ImmediateNotifyPlugin/$method.pm"; 1 };
@@ -101,16 +108,15 @@ sub _loadHandlers {
 
         if ( defined( $methodHandlers{$method} ) ) {
             debug("- ImmediateNotifyPlugin::$method OK");
+            return 1;
         }
         else {
             warning("- ImmediateNotifyPlugin::$method failed to load $@ $!");
+            return 0;
         }
     }
-
-    unless (%methodHandlers) {
-        warning(
-"- ImmediateNotifyPlugin: No methods available, initialization failed"
-        );
+    else {
+        warning("- ImmediateNotifyPlugin::$method not permitted by configuration!");
         return 0;
     }
 }
@@ -167,7 +173,7 @@ sub processName {
 
 # =========================
 sub afterSaveHandler {
-    my ( $text, $topic, $web, $error ) = @_;
+    my ( $text, $topic, $web, $error, $meta ) = @_;
     my $user = Foswiki::Func::getWikiName();
 
 # This handler is called by Foswiki::Store::saveTopic just after the save action.
@@ -199,7 +205,7 @@ sub afterSaveHandler {
         }
     }
 
-    # Retrieve the WebImmediateNotify topic and extract names
+# Retrieve the WebImmediateNotify topic and extract names
     my $notifyTopic =
       Foswiki::Func::readTopicText( $web, "WebImmediateNotify" );
     debug("- ImmediateNotifyPlugin: no WebImmediateNotify topic found in $web")
@@ -218,31 +224,25 @@ sub afterSaveHandler {
         return;
     }
 
+# Recursively expand all users / groups into a list of names to notify
     my ( %users, %groups );
     foreach my $name (@names) {
         processName( $name, \%users, \%groups );
     }
 
-    foreach my $kk ( keys %users ) {
-        debug("- ImmediateNotifyPlugin: DUMP $users{$kk}{METHOD}");
-    }
-
+# Extract required methods from the users list and lazy load them 
     my %userMethods;
     foreach my $user ( keys %users ) {
         debug("- ImmediateNotifyPlugin processing Users: $user");
-        unless ( defined( $users{$user} ) && length( $users{$user} ) > 0 ) {
-            warning(
-"- ImmediateNotifyPlugin: User topic \"$Foswiki::cfg{UsersWebName}.$user\" not found!"
-            );
-            next;
-        }
 
         my @methodList = {};
         @methodList = ( $users{$user}{METHOD} );
 
         foreach my $method (@methodList) {
-            $userMethods{$user}{$method} = 1;
-            debug("- ImmediateNotifyPlugin: Set method to $method for $user ");
+            if ( _loadHandler($method) ) {
+                $userMethods{$user}{$method} = 1;
+                debug("- ImmediateNotifyPlugin: Handler loaded - Set method to $method for $user ");
+            }
         }
     }
 
