@@ -95,7 +95,7 @@ sub _loadHandler {
         unless ( defined($modulePresent) ) {
             warning("- ImmediateNotifyPlugin::$method failed to load: $@ $!");
             debug("- ImmediateNotifyPlugin::$method failed to load: $@ $!");
-            next;
+            return 0;
         }
 
         my $module = "Foswiki::Plugins::ImmediateNotifyPlugin::${method}::";
