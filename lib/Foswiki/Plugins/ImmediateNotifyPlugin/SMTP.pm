@@ -56,9 +56,7 @@ sub handleNotify {
             &$debug("- SMTP: Sending mail to $to ($userName)");
             &$debug("- SMTP: MESSAGE ($msg)");
 
-            my $foswiki    = new Foswiki( $Foswiki::cfg{DefaultUserLogin} );
-            my $foswikiNet = $foswiki->net();
-            my $error      = $foswikiNet->sendEmail($msg);
+            my $error = &Foswiki::Func::sendEmail( $msg );
 
             &$debug("- SMTP: Error ($error)") if ($error);
         }
