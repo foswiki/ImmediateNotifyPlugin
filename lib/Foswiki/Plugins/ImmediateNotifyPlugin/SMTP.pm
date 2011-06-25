@@ -3,32 +3,26 @@ package Foswiki::Plugins::ImmediateNotifyPlugin::SMTP;
 use strict;
 use Foswiki::Net;
 
-use vars
-  qw($user $pass $server $wikiuser $web $topic $debug $warning $sendEmail);
+my $debug;
+my $warning;
 
 # ========================
 # initMethed - initializes a single notification method
 sub initMethod {
 
-    $server = $Foswiki::cfg{SMTP}{MAILHOST}
-      || Foswiki::Func::getPreferencesValue("SMTPMAILHOST");
     $debug   = \&Foswiki::Plugins::ImmediateNotifyPlugin::debug;
     $warning = \&Foswiki::Plugins::ImmediateNotifyPlugin::warning;
-    return defined($server);
+    return 1;
 }
 
 # ========================
 # handleNotify - handles notification for a single notification method
-# Parameters: $userHash, $web, $topic, $wikiuser
+# Parameters: $userHash, $info
 #    $userHash is a hash reference of the form username->user topic text
-#    $web is the web in which the topic is stored
-#    $topic is the current topic
-#    $wikiuser is the logged-in user who saved the topic
+#    $info is an extended topicRevisionInfo hash for the saved topic
 sub handleNotify {
     my $userHash = shift;
-    my $web      = shift;
-    my $topic    = shift;
-    my $wikiuser = shift;
+    my $info = shift;
     my ($skin)   = Foswiki::Func::getPreferencesValue("SKIN");
     my ($template) = Foswiki::Func::readTemplate( 'smtp', 'immediatenotify' );
 
@@ -36,11 +30,12 @@ sub handleNotify {
     my ($from) = Foswiki::Func::getPreferencesValue("WIKIWEBMASTER");
 
     $template =~ s/%EMAILFROM%/$from/go;
-    $template =~ s/%WEB%/$web/go;
-    $template =~ s/%TOPICNAME%/$topic/go;
-    $template =~ s/%USER%/$wikiuser/go;
+    $template =~ s/%WEB%/$info->{web}/go;
+    $template =~ s/%TOPICNAME%/$info->{topic}/go;
+    $template =~ s/%USER%/$info->{user}/go;
+    $template =~ s/%REV%/$info->{version}/go;
 
-    $template = Foswiki::Func::expandCommonVariables( $template, $topic, $web );
+    $template = Foswiki::Func::expandCommonVariables( $template, $info->{topic}, $info->{web} );
 
     foreach my $userName ( keys %$userHash ) {
 

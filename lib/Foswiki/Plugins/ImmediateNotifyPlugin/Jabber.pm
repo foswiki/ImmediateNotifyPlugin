@@ -17,9 +17,9 @@ my $con;
 # initMethed - initializes a single notification method
 sub initMethod {
     my $prefPrefix = "IMMEDIATENOTIFYPLUGIN_JABBER_";
-    $xmppUser = Foswiki::Func::getPreferencesValue( $prefPrefix . "USERNAME" );
-    $xmppPass = Foswiki::Func::getPreferencesValue( $prefPrefix . "PASSWORD" );
-    $xmppServer = Foswiki::Func::getPreferencesValue( $prefPrefix . "SERVER" );
+    $xmppUser = $Foswiki::cfg{ImmediateNotifyPlugin}{Jabber}{Username} || Foswiki::Func::getPreferencesValue( $prefPrefix . "USERNAME" );
+    $xmppPass = $Foswiki::cfg{ImmediateNotifyPlugin}{Jabber}{Password} || Foswiki::Func::getPreferencesValue( $prefPrefix . "PASSWORD" );
+    $xmppServer =  $Foswiki::cfg{ImmediateNotifyPlugin}{Jabber}{Server} || Foswiki::Func::getPreferencesValue( $prefPrefix . "SERVER" );
     $xmppResource =
       'Foswiki';    #Foswiki::Func::getPreferencesValue( 'WIKITOOLNAME' );
     $debug   = \&Foswiki::Plugins::ImmediateNotifyPlugin::debug;
@@ -55,26 +55,23 @@ sub initMethod {
 
 # ========================
 # handleNotify - handles notification for a single notification method
-# Parameters: $userHash, $web, $topic, $wikiuser
+# Parameters: $userHash, $info
 #    $userHash is a hash reference of the form username->user topic text
-#    $web is the web in which the topic is stored
-#    $topic is the current topic
-#    $wikiuser is the logged-in user who saved the topic
+#    $info is a hash reference for an extended topicRevisionInfo of the saved topic
 sub handleNotify {
-    my $userHash = shift;
-    my $web      = shift;
-    my $topic    = shift;
-    my $wikiuser = shift;
+    my $userHash    = shift;
+    my $info        = shift;
 
     &$debug("- Jabber: Logged in OK, sending messages...");
-    my $mainWeb = Foswiki::Func::getPreferencesValue("MAINWEB") || "Main";
     my $toolName = Foswiki::Func::getPreferencesValue("WIKITOOLNAME")
       || "Foswiki";
     foreach my $user ( keys %$userHash ) {
 
+        &$debug(" processing $user");
         #&$debug(" userref = ".ref($userHash->{$user}));
         my %uHash = %{ $userHash->{$user} };
 
+        # TODO:  Allow serverless ID's - substute in the @server for destination
         # get jabber userid
         my $jabberID;
         if ( $uHash{PARMS} ) {
@@ -83,8 +80,8 @@ sub handleNotify {
         }
         next unless $jabberID;
         my $message  = new Net::XMPP::Message;
-        my $topicUrl = Foswiki::Func::getViewUrl( $web, $topic );
-        my $body     = "$topicUrl on $toolName has been updated by $wikiuser!";
+        my $topicUrl = Foswiki::Func::getViewUrl( $info->{web}, $info->{topic} );
+        my $body     = "$topicUrl on $toolName has been updated by $info->{user} to Revision r$info->{version}!";
         $message->SetMessage(
             to   => $jabberID,
             from => "$user\@$xmppServer",

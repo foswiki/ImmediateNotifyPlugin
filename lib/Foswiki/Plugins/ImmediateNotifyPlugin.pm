@@ -26,7 +26,7 @@ use warnings;
 use Data::Dumper;
 
 our $VERSION           = '$Rev$';
-our $RELEASE           = 'v0.4 (testing)';
+our $RELEASE           = 'v1.0RC';
 our $NO_PREFS_IN_TOPIC = 1;
 
 our $debug;
@@ -52,6 +52,7 @@ sub warning {
 # =========================
 sub initPlugin {
     my ( $topic, $web, $user, $installWeb ) = @_;
+    my $methodCount = 0;
 
     # check for Plugins.pm versions
     if ( $Foswiki::Plugins::VERSION < 1.011 ) {
@@ -63,26 +64,32 @@ sub initPlugin {
     # Get plugin debug flag
     $debug = Foswiki::Func::getPluginPreferencesFlag("DEBUG") || 0;
 
-    my $methods = Foswiki::Func::getPluginPreferencesValue("METHODS");
-    if ( !defined($methods) ) {
-        warning(
-"- ImmediateNotifyPlugin: No METHODS defined in site preferences topic, defaulting to SMTP"
-        );
-        $methodAllowed{SMTP} = 1;;
-    }
-    else {
-        foreach my $method ( split(/[,\s]+/, $methods) ) {
+    my @available = qw( Jabber SMTP );
+
+    foreach my $method ( @available ) {
+        if ( $Foswiki::cfg{ImmediateNotifyPlugin}{$method}{Enabled} ) {
             debug("Allowing method $method");
             $methodAllowed{$method} = 1;
+            $methodCount++;
         }
     }
 
     # Plugin correctly initialized
-    debug(
+    if ( $methodCount ) {
+        debug(
 "- Foswiki::Plugins::ImmediateNotifyPlugin::initPlugin( $web.$topic ) is OK"
-    );
-    return 1;
+        );
+        return 1;
+    }
+    else {
+        warning("ImmediateNotifyPlugin - no methods enabled");
+        return 0;
+        }
 }
+
+sub finishPlugin {
+    debug("finishPlugin entered");
+    }
 
 sub _loadHandler {
     my $method = shift;
@@ -173,8 +180,13 @@ sub processName {
 
 # =========================
 sub afterSaveHandler {
-    my ( $text, $topic, $web, $error, $meta ) = @_;
+    my ( $text, $topic, $web, $error, $topicObject ) = @_;
     my $user = Foswiki::Func::getWikiName();
+
+    my $topicInfo = $topicObject->getRevisionInfo();
+    $topicInfo->{topic} = $topic;
+    $topicInfo->{web} = $web;
+    $topicInfo->{user} = $user;
 
 # This handler is called by Foswiki::Store::saveTopic just after the save action.
 
@@ -263,7 +275,7 @@ sub afterSaveHandler {
         debug( "- ImmediateNotifyPlugin: $method userlist "
               . join( " ", keys %methodUsers ) );
         if (%methodUsers) {
-            &{ $methodHandlers{$method} }( \%methodUsers, $web, $topic, $user );
+            &{ $methodHandlers{$method} }( \%methodUsers, $topicInfo );
         }
     }
 }
