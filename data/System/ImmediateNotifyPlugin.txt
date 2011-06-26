@@ -41,15 +41,15 @@ Add a set statement to the topic. WikiNames (or groups) are listed in a comma se
 
 ---+++ User configuration
 
-The user may optionally configure their desired notification method.  Since SMTP and Jabber are currently the only available methods, this consists of:
+The user may optionally configure their desired notification method.  Since SMTP and XMPP are currently the only available methods, this consists of:
 
-   * Adding a line =" * Set IMMEDIATENOTIFYMETHOD = Jabber(userid)"= (or "SMTP", respectively) to their user topic.
+   * Adding a line =" * Set IMMEDIATENOTIFYMETHOD = XMPP(userid)"= (or "SMTP", respectively) to their user topic.
 
 If no notification method is selected, the user will be notified using SMTP.
 
 | *Desired Notifications* | *Setting in User topic* |
 | Email sent to default ID registered on Foswiki. | =* Set IMMEDIATENOTIFYMETHOD = SMTP= <br />Or don't set anything - this is the default. |
-| XMPP / Jabber IM sent to wikiuser@openfire. | =* Set IMMEDIATENOTIFYMETHOD = Jabber(wikiuser@openfire)= |
+| XMPP / Jabber IM sent to wikiuser@openfire. | =* Set IMMEDIATENOTIFYMETHOD = XMPP(wikiuser@openfire)= |
 
 ---++ <nop>%TOPIC% Global Settings
 
@@ -63,13 +63,13 @@ If no notification method is selected, the user will be notified using SMTP.
 %X% This version of the plugin must be configured in the Foswiki system configuration using the [[%SCRIPTURL{"configure"}%][configure script]].
 
    * Enable the desired notification methods in the configuration.  If a notification method is not enabled here, it will be unavailable for users to use.
-      * ={ImmediateNotifyPlugin}{SMTP}{Enabled}=
-      * ={ImmediateNotifyPlugin}{Jabber}{Enabled}=
+      * ={Plugins}{ImmediateNotifyPlugin}{SMTP}{Enabled}=
+      * ={Plugins}{ImmediateNotifyPlugin}{XMPP}{Enabled}=
 
    * For XMPP (Jabber) instant message notifications, the servername, userid and password for the sever account must be configured.
-      * ={ImmediateNotifyPlugin}{Jabber}{Server}=
-      * ={ImmediateNotifyPlugin}{Jabber}{Username}=
-      * ={ImmediateNotifyPlugin}{Jabber}{Password}=
+      * ={Plugins}{ImmediateNotifyPlugin}{XMPP}{Server}=
+      * ={Plugins}{ImmediateNotifyPlugin}{XMPP}{Username}=
+      * ={Plugins}{ImmediateNotifyPlugin}{XMPP}{Password}=
 
    * For SMTP, see the configure Email and Proxies Tab.
 
@@ -80,14 +80,15 @@ __Note:__ You do not need to install anything on the browser to use this plugin.
 | *File:* | *Description:* |
 %$MANIFEST%
    * Visit =configure= in your Foswiki installation, and enable the plugin in the {Plugins} section.
-      * Under the tab for %TOPIC%, enable the desired methods, and configure the Jabber / XMPP server information
+      * Under the tab for %TOPIC%, enable the desired methods, and configure the XMPP server information
    * Set up notification methods (default is SMTP)
-      * Currently the only available methods are via SMTP and Jabber.
+      * Currently the only available methods are via SMTP and XMPP.
          * SMTP
             * The site's global email configuration is used - no additional configuration is needed.
-         * Jabber
+         * XMPP
             * Set up a Jabber account for the wiki with a standard client.
-   * Create a =Web<nop>ImmediateNotify= topic in each web for users to list their names in for notification.
+   * Create a =Web<nop>ImmediateNotify= topic in each web for users to list their names in for notification. __or__
+   * Instruct users to add IMMEDIATENOTIFY settings to individual topics
 
 ---++ Plugin Info
 

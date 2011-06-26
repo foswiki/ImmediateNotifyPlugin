@@ -6,13 +6,17 @@ use Foswiki::Net;
 my $debug;
 my $warning;
 
-# ========================
-# initMethed - initializes a single notification method
-sub initMethod {
+sub new {
+    my ($class) = @_;
+
+    my $this = bless( {}, $class );
 
     $debug   = \&Foswiki::Plugins::ImmediateNotifyPlugin::debug;
     $warning = \&Foswiki::Plugins::ImmediateNotifyPlugin::warning;
-    return 1;
+
+    &$debug("- SMTP init ");
+
+    return $this;
 }
 
 # ========================
@@ -20,10 +24,12 @@ sub initMethod {
 # Parameters: $userHash, $info
 #    $userHash is a hash reference of the form username->user topic text
 #    $info is an extended topicRevisionInfo hash for the saved topic
-sub handleNotify {
+sub notify {
+    my $this     = shift;
     my $userHash = shift;
-    my $info = shift;
-    my ($skin)   = Foswiki::Func::getPreferencesValue("SKIN");
+    my $info     = shift;
+
+    my ($skin) = Foswiki::Func::getPreferencesValue("SKIN");
     my ($template) = Foswiki::Func::readTemplate( 'smtp', 'immediatenotify' );
 
     # &$debug("- SMTP:  template read $template");
@@ -35,7 +41,9 @@ sub handleNotify {
     $template =~ s/%USER%/$info->{user}/go;
     $template =~ s/%REV%/$info->{version}/go;
 
-    $template = Foswiki::Func::expandCommonVariables( $template, $info->{topic}, $info->{web} );
+    $template =
+      Foswiki::Func::expandCommonVariables( $template, $info->{topic},
+        $info->{web} );
 
     foreach my $userName ( keys %$userHash ) {
 
@@ -51,12 +59,20 @@ sub handleNotify {
             &$debug("- SMTP: Sending mail to $to ($userName)");
             &$debug("- SMTP: MESSAGE ($msg)");
 
-            my $error = &Foswiki::Func::sendEmail( $msg );
+            my $error = &Foswiki::Func::sendEmail($msg);
 
             &$debug("- SMTP: Error ($error)") if ($error);
         }
 
     }
+}
+
+sub connect {
+    return 1;
+}
+
+sub disconnect {
+    return 1;
 }
 
 1;

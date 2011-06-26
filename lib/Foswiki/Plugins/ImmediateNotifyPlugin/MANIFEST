@@ -1,6 +1,7 @@
 lib/Foswiki/Plugins/ImmediateNotifyPlugin.pm
-lib/Foswiki/Plugins/ImmediateNotifyPlugin/Jabber.pm
+lib/Foswiki/Plugins/ImmediateNotifyPlugin/XMPP.pm
 lib/Foswiki/Plugins/ImmediateNotifyPlugin/SMTP.pm
 lib/Foswiki/Plugins/ImmediateNotifyPlugin/Config.spec
 data/System/ImmediateNotifyPlugin.txt
 templates/smtp.immediatenotify.tmpl
+templates/xmpp.immediatenotify.tmpl
