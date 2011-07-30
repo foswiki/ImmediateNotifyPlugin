@@ -1,24 +1,13 @@
-# Immediate Notify Plugin for Foswiki - The Free and Open Source Wiki, http://foswiki.org/
-#
-# Copyright (C) 2003 Walter Mundt, emage@spamcop.net
-# Copyright (C) 2003 Akkaya Consulting GmbH, jpabel@akkaya.de
-#
-# This program is free software; you can redistribute it and/or
-# modify it under the terms of the GNU General Public License
-# as published by the Free Software Foundation; either version 2
-# of the License, or (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details, published at
-# http://www.gnu.org/copyleft/gpl.html
-#
-# =========================
-#
-# This plugin supports immediate notification of topic saves.
-#
-# =========================
+# See bottom of file for default license and copyright information
+
+=begin TML
+
+---+ package Foswiki::Plugins::ImmediateNotifyPlugin
+
+This plugin supports immediate notification of topic saves.
+
+=cut
+
 package Foswiki::Plugins::ImmediateNotifyPlugin;
 use strict;
 use warnings;
@@ -36,20 +25,38 @@ my %methodAllowed;     # Methods permitted by config.
 
 # Regular expressions used in topic processing
 
-my $NOTIFYREGEX =
-qr/$Foswiki::regex{setRegex}(?:IMMEDIATENOTIFYPLUGIN_)?IMMEDIATENOTIFY\s*=\s*(.*?)$/sm;
-
 my $METHODREGEX =
 qr/$Foswiki::regex{setRegex}(?:IMMEDIATENOTIFYPLUGIN_)?IMMEDIATENOTIFYMETHOD\s*=\s*(.*?)(?:\((.*?)\))?\s*$/sm;
 
+=begin TML
+
+---+ debug ( $message )
+
+Write debug messages if debug is enabled.
+
+=cut
+
 sub debug { Foswiki::Func::writeDebug(@_) if $debug; }
+
+=begin TML
+
+---+ warning ( $message )
+
+Unconditionally write warning messages to debug log.
+
+=cut
 
 sub warning {
     Foswiki::Func::writeWarning(@_);
     debug( "WARNING" . $_[0], @_[ 1 .. $#_ ] );
 }
 
-# =========================
+=begin TML
+
+---+ initPlugin ( $topic, $web, $user)
+
+=cut
+
 sub initPlugin {
     my ( $topic, $web, $user, $installWeb ) = @_;
     my $methodCount = 0;
@@ -65,9 +72,11 @@ sub initPlugin {
     $debug = Foswiki::Func::getPluginPreferencesFlag("DEBUG") || 0;
 
     # Find any configured methods and make available.
-    foreach my $method ( keys %{$Foswiki::cfg{Plugins}{ImmediateNotifyPlugin}} ) {
-        next if ($method eq "Module" );
-        next if ($method eq "Enabled" );
+    foreach
+      my $method ( keys %{ $Foswiki::cfg{Plugins}{ImmediateNotifyPlugin} } )
+    {
+        next if ( $method eq "Module" );
+        next if ( $method eq "Enabled" );
         if ( $Foswiki::cfg{Plugins}{ImmediateNotifyPlugin}{$method}{Enabled} ) {
             debug("Allowing method $method");
             $methodAllowed{$method} = 1;
@@ -88,6 +97,14 @@ sub initPlugin {
     }
 }
 
+=begin TML
+
+---+ finishPlugin ( )
+
+Unload and disconnect any notifier methods with open connections.
+
+=cut
+
 sub finishPlugin {
 
     debug("finishPlugin entered");
@@ -97,6 +114,14 @@ sub finishPlugin {
         $methodHandlers{$handler} = '';
     }
 }
+
+=begin TML
+
+---+ _loadHandler ( $mehod )
+
+Find and load the requested notifitcation method.
+
+=cut
 
 sub _loadHandler {
     my $method = shift;
@@ -137,6 +162,18 @@ sub _loadHandler {
     }
 }
 
+=begin TML
+
+---+ processName ($name, $users, $groups)
+
+   * $name - User Name being processed
+   * $users - Hash of users on notification list
+   * $groups - Hash of groups on notification list
+
+Parse names to be notified, expanding groups and reading settings for each user.
+
+=cut
+
 sub processName {
     my ( $name, $users, $groups ) = @_;
 
@@ -155,22 +192,31 @@ sub processName {
     }
     else {
 
-      # SMELL:  We can't use Preferences API to retrieve user topic information.
-      # API requires that topic be readable by current user,  but we can't
-      # be sure of that - and user topics are often protected.
+        if (
+            Foswiki::Func::topicExists(
+                "$Foswiki::cfg{UsersWebName}", "$name"
+            )
+          )
+        {
+            my ( $topicObject, $text ) =
+              Foswiki::Func::readTopic( "$Foswiki::cfg{UsersWebName}",
+                "$name" );
 
-        my ( $meta, $text ) =
-          Foswiki::Func::readTopic( "$Foswiki::cfg{UsersWebName}", "$name" );
-        if ($text) {
-            $users->{$name}{TEXT} = $text;
+            my $methodString =
+              $topicObject->getPreference('IMMEDIATENOTIFYMETHOD');
 
-            if ( $text =~ /$METHODREGEX/ ) {
-                my $parms = $3 || '';
+            debug(
+"- ImmediateNotifyPlugin: method setting for $name found /$methodString/"
+            );
+
+            if ($methodString) {
+                my ( $method, $parms ) =
+                  $methodString =~ m/^(.*?)(?:\((.*?)\))?$/;
                 debug(
-"- ImmediateNotifyPlugin: processName: User $name found method ($2) parms ($parms) "
+"- ImmediateNotifyPlugin: processName: User $name found method ($method) parms ($parms) "
                 );
-                $users->{$name}{METHOD} = $2;
-                $users->{$name}{PARMS}  = $parms;
+                $users->{$name}{METHOD} = $method || 'SMTP';
+                $users->{$name}{PARMS}  = $parms  || '';
             }
             else {
                 $users->{$name}{METHOD} = 'SMTP';
@@ -187,7 +233,14 @@ sub processName {
     }
 }
 
-# =========================
+=begin TML
+
+---+ afterSaveHandler
+
+Procesas the saved topic peforming any requested notifications
+
+=cut
+
 sub afterSaveHandler {
     my ( $text, $topic, $web, $error, $topicObject ) = @_;
     my $user = Foswiki::Func::getWikiName();
@@ -206,22 +259,21 @@ sub afterSaveHandler {
         return;
     }
 
-# SMELL:  We should not have to parse out topic text.  But the old preferences
-# cache is still loaded in the afterSaveHandler.   So we would miss changes made
-# to the IMMEDIATENOTIFY setting in this save.
-#my $nameString = Foswiki::Func::getPreferencesValue('IMMEDIATENOTIFY') || '';
-
     my @names;
 
+# NOTE: in this case we DO want to use the Meta::getPreference() function.  If the normal
+# preferences API is used, settings are cached and don't reflect changes just saved in this
+# transaction.  The Meta function uses the raw topic data and not the cached settings.
+
 # Check if the topic contains an IMMEDIATENOTIFY setting and extract names if present
-    if ( $text =~ /$NOTIFYREGEX/ ) {
-        debug("- ImmediateNotifyPlugin: Found ($2) ");
-        my $nameString = $2;
+    my $nameString = $topicObject->getPreference('IMMEDIATENOTIFY');
+    if ($nameString) {
+        debug("- ImmediateNotifyPlugin: Found ($nameString) ");
         chomp $nameString;
         @names = split /[\s,]+/, $nameString;
         foreach my $n (@names) {
             debug(
-"- ImmediateNotifyPlugin: ($n) found in IMMEDIATENOTIFY in topic text"
+                "- ImmediateNotifyPlugin: ($n) found in IMMEDIATENOTIFY setting"
             );
         }
     }
@@ -292,3 +344,25 @@ sub afterSaveHandler {
 }
 
 1;
+
+__END__
+Foswiki - The Free and Open Source Wiki, http://foswiki.org/
+
+Copyright (C) 2008-2011 Foswiki Contributors. Foswiki Contributors
+are listed in the AUTHORS file in the root of this distribution.
+
+Copyright (C) 2010-2011 George Clark
+Copyright (C) 2003 Walter Mundt, emage@spamcop.net
+Copyright (C) 2003 Akkaya Consulting GmbH, jpabel@akkaya.de
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version. For
+more details read LICENSE in the root of this distribution.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+As per the GPL, removal of this notice is prohibited.

@@ -10,10 +10,11 @@ Unlike MailerContrib, this extension will perform an __immediate__ notification 
    * Need for immediate notification
    * Need for notification using XMPP (Jabber) or other non-standard channels.
 
-%X% Note that this extension is less efficient than the MailerContrib, and adds a small delay during save while the notifications are sent.
+<blockquote class="foswikiHelp">%X% Note that this extension is less efficient than the MailerContrib, and adds a small delay during save while the notifications are sent.</blockquote>
 
 The notifications are triggerd from two sources:
-   * Web based notifications are set in the WebImmediateNotify topic. Users listed in that topic will be notified of any changes to the web.
+   * Web based notifications are set in the <nop>WebImmediateNotify topic. Users listed in that topic will be notified of any changes to the web.
+      * Note: Unlike MailerContrib, this topic is a simple list of users to notify.  There is no ability to specified the desired topics.
    * Topic based notifications are set in the individual topics that will be tracked for notification.
 
 ---++ Important Changes in this release
@@ -22,8 +23,13 @@ This version makes significant changes in the configuration of the plugin:
    * Sensitive server user/password information is moved into the Foswiki configuration
    * Methods must be made available by enabling in the configuration
    * The syntax of the jabber user to be notified has been changed.  The line ="Jabber:user@server"= is replaced.  user@server is now a parameter of the IMMEDIATENOTIFYMETHOD.
+   * Jabber has been renamed to XMPP in line with the current protocol definition.
 
 ---++ Syntax Rules
+There are 3 areas of configuration:
+   * *Who to notify:*  This is set in the Web<nop>ImmediateNotifyTopic (Web based), or in individual topics (topic based).
+   * *How to notify them:*  This is optionally set per user in the User's topic.
+   * *Notification methods:* Available and default methods, server acccess passwords, etc.  These are set using [[%SCRIPTURL{"configure"}%#ImmediateNotifyPlugin$Extensions][configure]]
 ---+++ Web based notifications
 
 Register for notification in the Web<nop>ImmediateNotify topic by adding their username as an entry in a bullet list.
@@ -32,18 +38,20 @@ Register for notification in the Web<nop>ImmediateNotify topic by adding their u
    * MyTeamGroup
 </verbatim>
 
+<blockquote class="foswikiHelp">%X% Do not add any information beyond the user name desiring notification. There is no topic include/exclude filtering like in the MailerContrib.</blockquote>
+
 ---+++ Topic based notifications
 
-Add a set statement to the topic. WikiNames (or groups) are listed in a comma separated list. The user web prefix is supported but not required.
+Add a set statement to the topic, either directly inline, or using the "Topic Settings" editor. WikiNames (or groups) are listed in a comma separated list. The user web prefix is supported but not required.
 <verbatim>
    * Set IMMEDIATENOTIFY = JoeUser, MyTeamGroup
 </verbatim>
 
 ---+++ User configuration
 
-The user may optionally configure their desired notification method.  Since SMTP and XMPP are currently the only available methods, this consists of:
+The user may optionally configure their desired notification method.  Since XMPP and SMTP are currently the only available methods, this consists of:
 
-   * Adding a line =" * Set IMMEDIATENOTIFYMETHOD = XMPP(userid)"= (or "SMTP", respectively) to their user topic.
+   * Adding a line =" * Set IMMEDIATENOTIFYMETHOD = XMPP(userid)"= (or "SMTP", respectively) to their user topic either inline, or using the "Topic Settings" editor.
 
 If no notification method is selected, the user will be notified using SMTP.
 
@@ -53,14 +61,14 @@ If no notification method is selected, the user will be notified using SMTP.
 
 ---++ <nop>%TOPIC% Global Settings
 
-%X% In this version of %TOPIC%, configuration settings are __not read from this topic__.   System settings are configured in the %USERSWEB%.SitePreferences topic
+In this version of %TOPIC%, configuration settings are __not read from this topic__.   System settings are configured in the %USERSWEB%.SitePreferences topic.
 
    * Debug plugin: (See output in =data/debug.txt=)
       * Set IMMEDIATENOTIFYPLUGIN_DEBUG = 1
 
 ---++ <nop>%TOPIC% Configuration
 
-%X% This version of the plugin must be configured in the Foswiki system configuration using the [[%SCRIPTURL{"configure"}%][configure script]].
+This version of the plugin must be configured in the Foswiki system configuration using the [[%SCRIPTURL{"configure"}%#ImmediateNotifyPlugin$Extensions][configure script]].
 
    * Enable the desired notification methods in the configuration.  If a notification method is not enabled here, it will be unavailable for users to use.
       * ={Plugins}{ImmediateNotifyPlugin}{SMTP}{Enabled}=
@@ -96,7 +104,7 @@ __Note:__ You do not need to install anything on the browser to use this plugin.
 |  Plugin Version: | %$VERSION% |
 |  Plugin Release: | %$RELEASE% |
 |  Change History: | <!-- specify latest version first --> |
-|  26 Jun 2011 | Foswikitask:Item9551 - Major new release, significant config changes |
+|  26 Jul 2011 | Foswikitask:Item9551 - Major new release, significant config changes |
 |  26 Aug 2010 | Test release - Foswikitask:Item9551 |
 |  05 Jan 2010 | Ported to Foswiki (Foswiki:Main.WillNoris) |
 |  21 May 2007 | Bugs:Item3969 - 8bit email fix (Foswiki:Main.WillNorris) |
