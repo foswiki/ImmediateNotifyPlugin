@@ -23,10 +23,6 @@ our $debug;
 my %methodHandlers;    # Loaded handlers
 my %methodAllowed;     # Methods permitted by config.
 
-# Regular expressions used in topic processing
-
-my $METHODREGEX =
-qr/$Foswiki::regex{setRegex}(?:IMMEDIATENOTIFYPLUGIN_)?IMMEDIATENOTIFYMETHOD\s*=\s*(.*?)(?:\((.*?)\))?\s*$/sm;
 
 =begin TML
 
@@ -194,13 +190,15 @@ sub processName {
 
         if (
             Foswiki::Func::topicExists(
-                "$Foswiki::cfg{UsersWebName}", "$name"
+                "$Foswiki::cfg{UsersWebName}", $name
             )
           )
         {
+            # Must read user topic without auth checking - the user issuing the save
+            # does not necessarily have read authority for the user.
             my ( $topicObject, $text ) =
               Foswiki::Func::readTopic( "$Foswiki::cfg{UsersWebName}",
-                "$name" );
+                $name );
 
             my $methodString =
               $topicObject->getPreference('IMMEDIATENOTIFYMETHOD');
@@ -278,9 +276,10 @@ sub afterSaveHandler {
         }
     }
 
-    # Retrieve the WebImmediateNotify topic and extract names
+    # Retrieve the WebImmediateNotify topic and extract names - ignore permissions
+    # in case user saving topic can't access the topic.
     my $notifyTopic =
-      Foswiki::Func::readTopicText( $web, "WebImmediateNotify" );
+      Foswiki::Func::readTopicText( $web, "WebImmediateNotify", undef, 1 );
     debug("- ImmediateNotifyPlugin: no WebImmediateNotify topic found in $web")
       unless ($notifyTopic);
 
