@@ -23,6 +23,13 @@ our $debug;
 my %methodHandlers;    # Loaded handlers
 my %methodAllowed;     # Methods permitted by config.
 
+=begin TML
+
+---+ debug ( $message )
+
+Write debug messages if debug is enabled.
+
+=cut
 
 =begin TML
 
@@ -189,16 +196,13 @@ sub processName {
     else {
 
         if (
-            Foswiki::Func::topicExists(
-                "$Foswiki::cfg{UsersWebName}", $name
-            )
-          )
+            Foswiki::Func::topicExists( "$Foswiki::cfg{UsersWebName}", $name ) )
         {
-            # Must read user topic without auth checking - the user issuing the save
-            # does not necessarily have read authority for the user.
+
+        # Must read user topic without auth checking - the user issuing the save
+        # does not necessarily have read authority for the user.
             my ( $topicObject, $text ) =
-              Foswiki::Func::readTopic( "$Foswiki::cfg{UsersWebName}",
-                $name );
+              Foswiki::Func::readTopic( "$Foswiki::cfg{UsersWebName}", $name );
 
             my $methodString =
               $topicObject->getPreference('IMMEDIATENOTIFYMETHOD');
@@ -257,6 +261,14 @@ sub afterSaveHandler {
         return;
     }
 
+  #SMELL: We have to use the Meta getPreferences() function so that we get any
+  # modified results from the save.  Note:  This needs a fix to Foswiki::Meta to
+  # in Item9563 or changes made in the save will be missed.
+
+    my $testSet = $topicObject->getPreference('IMMEDIATENOTIFY');
+    debug("- ImmediateNotifyPlugin: getPreference returned $testSet \n")
+      if $testSet;
+
     my @names;
 
 # NOTE: in this case we DO want to use the Meta::getPreference() function.  If the normal
@@ -276,8 +288,8 @@ sub afterSaveHandler {
         }
     }
 
-    # Retrieve the WebImmediateNotify topic and extract names - ignore permissions
-    # in case user saving topic can't access the topic.
+  # Retrieve the WebImmediateNotify topic and extract names - ignore permissions
+  # in case user saving topic can't access the topic.
     my $notifyTopic =
       Foswiki::Func::readTopicText( $web, "WebImmediateNotify", undef, 1 );
     debug("- ImmediateNotifyPlugin: no WebImmediateNotify topic found in $web")

@@ -13,7 +13,7 @@ package Foswiki::Plugins::ImmediateNotifyPlugin::XMPP;
 use strict;
 use warnings;
 
-use Net::XMPP qw(Client);
+use Net::XMPP;
 
 my $debug;
 my $warning;
