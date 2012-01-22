@@ -80,6 +80,7 @@ sub initPlugin {
     {
         next if ( $method eq "Module" );
         next if ( $method eq "Enabled" );
+        next if ( $method eq "Bitly" );
         if ( $Foswiki::cfg{Plugins}{ImmediateNotifyPlugin}{$method}{Enabled} ) {
             debug("Allowing method $method");
             $methodAllowed{$method} = 1;
@@ -214,6 +215,7 @@ sub processName {
             if ($methodString) {
                 my ( $method, $parms ) =
                   $methodString =~ m/^(.*?)(?:\((.*?)\))?$/;
+                  $parms |= '';
                 debug(
 "- ImmediateNotifyPlugin: processName: User $name found method ($method) parms ($parms) "
                 );
@@ -232,6 +234,23 @@ sub processName {
 "- ImmediateNotifyPlugin: $name not found as a user or group, ignored"
             );
         }
+    }
+}
+
+
+=begin TML
+
+---+ beforeSaveHandler
+
+Set a flag if this is a new topic.
+
+=cut
+
+sub beforeSaveHandler {
+    my ( $text, $topic, $web, $meta ) = @_;
+
+    unless ( Foswiki::Func::topicExists($web, $topic) ) {
+      Foswiki::Func::getContext()->{'NewTopic'} = 1;
     }
 }
 
