@@ -31,14 +31,6 @@ Write debug messages if debug is enabled.
 
 =cut
 
-=begin TML
-
----+ debug ( $message )
-
-Write debug messages if debug is enabled.
-
-=cut
-
 sub debug { Foswiki::Func::writeDebug(@_) if $debug; }
 
 =begin TML
@@ -80,7 +72,7 @@ sub initPlugin {
     {
         next if ( $method eq "Module" );
         next if ( $method eq "Enabled" );
-        next if ( $method eq "Bitly" );
+        next if ( $method eq "Bitly" );     # Bitly is not a notifier plugin
         if ( $Foswiki::cfg{Plugins}{ImmediateNotifyPlugin}{$method}{Enabled} ) {
             debug("Allowing method $method");
             $methodAllowed{$method} = 1;
@@ -182,10 +174,11 @@ sub processName {
     my ( $name, $users, $groups ) = @_;
 
     debug("- ImmediateNotifyPlugin: Processing name $name");
-    return if exists $users->{$name};    # Already saw this name - skip it.
+    return
+      if ( exists $users->{$name} || exists $groups->{name} )
+      ;    # Already saw this name - skip it.
 
     if ( Foswiki::Func::isGroup($name) ) {
-        return if exists $groups->{$name};    # don't reprocess groups
         $groups->{$name} = $name;
 
         my $it = Foswiki::Func::eachGroupMember($name);
@@ -215,12 +208,12 @@ sub processName {
             if ($methodString) {
                 my ( $method, $parms ) =
                   $methodString =~ m/^(.*?)(?:\((.*?)\))?$/;
-                  $parms |= '';
+                $parms |= '';
                 debug(
 "- ImmediateNotifyPlugin: processName: User $name found method ($method) parms ($parms) "
                 );
                 $users->{$name}{METHOD} = $method || 'SMTP';
-                $users->{$name}{PARMS}  = $parms  || '';
+                $users->{$name}{PARMS} = $parms;
             }
             else {
                 $users->{$name}{METHOD} = 'SMTP';
@@ -237,7 +230,6 @@ sub processName {
     }
 }
 
-
 =begin TML
 
 ---+ beforeSaveHandler
@@ -249,8 +241,8 @@ Set a flag if this is a new topic.
 sub beforeSaveHandler {
     my ( $text, $topic, $web, $meta ) = @_;
 
-    unless ( Foswiki::Func::topicExists($web, $topic) ) {
-      Foswiki::Func::getContext()->{'NewTopic'} = 1;
+    unless ( Foswiki::Func::topicExists( $web, $topic ) ) {
+        Foswiki::Func::getContext()->{'NewTopic'} = 1;
     }
 }
 
@@ -273,7 +265,7 @@ sub afterSaveHandler {
 
 # This handler is called by Foswiki::Store::saveTopic just after the save action.
 
-    debug("- ImmediateNotifyPlugin::afterSaveHandler( $_[2].$_[1] )");
+    debug("- ImmediateNotifyPlugin::afterSaveHandler( $web.$topic )");
 
     if ($error) {
         debug("- ImmediateNotifyPlugin: Unsuccessful save, not notifying...");
@@ -284,15 +276,7 @@ sub afterSaveHandler {
   # modified results from the save.  Note:  This needs a fix to Foswiki::Meta to
   # in Item9563 or changes made in the save will be missed.
 
-    my $testSet = $topicObject->getPreference('IMMEDIATENOTIFY');
-    debug("- ImmediateNotifyPlugin: getPreference returned $testSet \n")
-      if $testSet;
-
     my @names;
-
-# NOTE: in this case we DO want to use the Meta::getPreference() function.  If the normal
-# preferences API is used, settings are cached and don't reflect changes just saved in this
-# transaction.  The Meta function uses the raw topic data and not the cached settings.
 
 # Check if the topic contains an IMMEDIATENOTIFY setting and extract names if present
     my $nameString = $topicObject->getPreference('IMMEDIATENOTIFY');
@@ -378,10 +362,9 @@ sub afterSaveHandler {
 __END__
 Foswiki - The Free and Open Source Wiki, http://foswiki.org/
 
-Copyright (C) 2008-2011 Foswiki Contributors. Foswiki Contributors
+Copyright (C) 2008-2012 Foswiki Contributors. Foswiki Contributors
 are listed in the AUTHORS file in the root of this distribution.
 
-Copyright (C) 2010-2011 George Clark
 Copyright (C) 2003 Walter Mundt, emage@spamcop.net
 Copyright (C) 2003 Akkaya Consulting GmbH, jpabel@akkaya.de
 
