@@ -31,7 +31,12 @@ Write debug messages if debug is enabled.
 
 =cut
 
-sub debug { Foswiki::Func::writeDebug(@_) if $debug; }
+sub debug {
+
+    #print STDERR @_;
+    #print STDERR "\n";
+    Foswiki::Func::writeDebug(@_) if $debug;
+}
 
 =begin TML
 
@@ -299,7 +304,7 @@ sub afterSaveHandler {
       unless ($notifyTopic);
 
     while ( $notifyTopic =~
-/(\t+|(   )+)\* (?:\%MAINWEB\%|$Foswiki::cfg{UsersWebName})\.([^\r\n]+)/go
+/(\t+|(   )+)\* (?:\%MAINWEB\%\.|$Foswiki::cfg{UsersWebName}\.)?([^\r\n]+)/go
       )
     {
         push @names, $3 if $3;
