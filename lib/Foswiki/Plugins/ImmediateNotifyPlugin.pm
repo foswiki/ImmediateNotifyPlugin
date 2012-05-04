@@ -139,12 +139,11 @@ sub _loadHandler {
             require $file . '.pm';
             $handler = $module->new();
             1;
-          }
-          or do {
+        } or do {
             print STDERR "FAILED TO LOAD  $@";
             warning("- ImmediateNotifyPlugin::$method failed to load $@ $!");
             return 0;
-          };
+        };
 
         if ( $handler->connect() ) {
             $methodHandlers{$method} = $handler;
